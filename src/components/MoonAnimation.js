@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import styled from 'styled-components';
+import styled, { keyframes } from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
 import ButterflySVG from './ButterflySVG';
+import MagicAlbum from './MagicAlbum';
 
 const MoonContainer = styled.div`
   width: 100vw;
@@ -87,29 +88,29 @@ const PromptText = styled(motion.div)`
   padding: 0 20px;
 `;
 
-const ShakeButton = styled(motion.button)`
-  position: absolute;
-  bottom: 30%;
-  padding: 15px 30px;
-  background: rgba(255, 255, 255, 0.2);
-  border: 2px solid rgba(255, 255, 255, 0.5);
-  border-radius: 25px;
-  color: white;
-  font-size: 1.2rem;
-  cursor: pointer;
-  backdrop-filter: blur(5px);
-  transition: all 0.3s ease;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.3);
-    transform: scale(1.05);
-  }
+const MagicTransition = styled(motion.div)`
+  position: fixed;
+  left: 0; top: 0; right: 0; bottom: 0;
+  width: 100vw; height: 100vh;
+  background: radial-gradient(circle at 50% 50%, #fffbe9 0%, #fbc2eb 60%, #1a1a2e 100%);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  color: #a18cd1;
+  letter-spacing: 2px;
+  font-family: 'Caveat', cursive;
+  pointer-events: none;
 `;
 
 const MoonAnimation = () => {
   const [butterflies, setButterflies] = useState([]);
   const [isShaking, setIsShaking] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
+  const [showTransition, setShowTransition] = useState(false);
+  const [showAlbum, setShowAlbum] = useState(false);
+  const [effectStarted, setEffectStarted] = useState(false);
   const containerRef = useRef(null);
   const lastShakeTime = useRef(0);
   const lastAcceleration = useRef({ x: 0, y: 0, z: 0 });
@@ -145,39 +146,34 @@ const MoonAnimation = () => {
   }, []);
 
   const handleShake = useCallback(() => {
+    if (effectStarted) return;
+    setEffectStarted(true);
     const now = Date.now();
     if (now - lastShakeTime.current < 500) return;
     lastShakeTime.current = now;
-
     setIsShaking(true);
     vibrate();
     const newButterflies = Array.from({ length: 12 }, () => 
       createButterfly(window.innerWidth / 2, window.innerHeight / 2)
     );
     setButterflies(prev => [...prev, ...newButterflies]);
-
     setTimeout(() => setIsShaking(false), 500);
-  }, [createButterfly, vibrate]);
+  }, [createButterfly, vibrate, effectStarted]);
 
   useEffect(() => {
     const handleDeviceMotion = (event) => {
       const acceleration = event.accelerationIncludingGravity;
       if (!acceleration) return;
-
       const currentAcceleration = {
         x: acceleration.x || 0,
         y: acceleration.y || 0,
         z: acceleration.z || 0
       };
-
       const deltaX = Math.abs(currentAcceleration.x - lastAcceleration.current.x);
       const deltaY = Math.abs(currentAcceleration.y - lastAcceleration.current.y);
       const deltaZ = Math.abs(currentAcceleration.z - lastAcceleration.current.z);
-
       lastAcceleration.current = currentAcceleration;
-
       const threshold = 5;
-      
       if (deltaX > threshold || deltaY > threshold || deltaZ > threshold) {
         shakeCount.current += 1;
         if (shakeCount.current >= 2) {
@@ -188,7 +184,6 @@ const MoonAnimation = () => {
         shakeCount.current = 0;
       }
     };
-
     if (typeof DeviceMotionEvent !== 'undefined') {
       if (typeof DeviceMotionEvent.requestPermission === 'function') {
         DeviceMotionEvent.requestPermission()
@@ -202,7 +197,6 @@ const MoonAnimation = () => {
         window.addEventListener('devicemotion', handleDeviceMotion);
       }
     }
-
     return () => {
       window.removeEventListener('devicemotion', handleDeviceMotion);
     };
@@ -224,10 +218,23 @@ const MoonAnimation = () => {
           .filter(butterfly => butterfly.opacity > 0)
       );
     };
-
     const animationFrame = requestAnimationFrame(updateButterflies);
     return () => cancelAnimationFrame(animationFrame);
   }, [butterflies]);
+
+  useEffect(() => {
+    if (effectStarted && butterflies.length === 0 && !isShaking && !showAlbum && !showTransition) {
+      setShowTransition(true);
+      setTimeout(() => {
+        setShowTransition(false);
+        setShowAlbum(true);
+      }, 1600);
+    }
+  }, [butterflies, isShaking, showAlbum, showTransition, effectStarted]);
+
+  if (showAlbum) {
+    return <MagicAlbum />;
+  }
 
   return (
     <MoonContainer ref={containerRef}>
@@ -266,22 +273,27 @@ const MoonAnimation = () => {
           </ButterflyWrapper>
         ))}
       </AnimatePresence>
-      <PromptText
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 1, duration: 1 }}
-      >
-        {isIOS ? 'Нажми на луну или кнопку для эффекта' : 'Встряхни телефон или нажми на луну...'}
-      </PromptText>
-      {isIOS && (
-        <ShakeButton
-          onClick={handleShake}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
+      {!effectStarted && (
+        <PromptText
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 1, duration: 1 }}
         >
-          Создать эффект ✨
-        </ShakeButton>
+          {'Встряхни телефон или нажми на луну...'}
+        </PromptText>
       )}
+      <AnimatePresence>
+        {showTransition && (
+          <MagicTransition
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 1.2 }}
+          >
+            <span>✨ Волшебство... ✨</span>
+          </MagicTransition>
+        )}
+      </AnimatePresence>
     </MoonContainer>
   );
 };

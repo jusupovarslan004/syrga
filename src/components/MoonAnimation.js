@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
+import ButterflySVG from './ButterflySVG';
 
 const MoonContainer = styled.div`
   width: 100vw;
@@ -66,57 +67,13 @@ const MoonCraters = styled.div`
   transform-style: preserve-3d;
 `;
 
-const Butterfly = styled(motion.div)`
+const ButterflyWrapper = styled(motion.div)`
   position: absolute;
-  width: 30px;
-  height: 30px;
-  transform-style: preserve-3d;
+  width: 48px;
+  height: 48px;
   pointer-events: none;
   z-index: 1;
-
-  &::before, &::after {
-    content: '';
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    background: ${props => props.color || '#ffffff'};
-    border-radius: 50% 50% 0 50%;
-    transform-origin: center;
-    filter: blur(1px);
-    box-shadow: 0 0 10px ${props => props.color || '#ffffff'};
-  }
-
-  &::before {
-    transform: rotate(45deg) scale(0.8);
-    animation: flutterLeft 0.5s ease-in-out infinite alternate;
-  }
-
-  &::after {
-    transform: rotate(-45deg) scale(0.8);
-    animation: flutterRight 0.5s ease-in-out infinite alternate;
-  }
-
-  @keyframes flutterLeft {
-    0% { transform: rotate(45deg) scale(0.8); }
-    100% { transform: rotate(35deg) scale(0.9); }
-  }
-
-  @keyframes flutterRight {
-    0% { transform: rotate(-45deg) scale(0.8); }
-    100% { transform: rotate(-35deg) scale(0.9); }
-  }
-`;
-
-const ButterflyBody = styled.div`
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 4px;
-  height: 20px;
-  background: ${props => props.color || '#ffffff'};
-  transform: translate(-50%, -50%);
-  border-radius: 2px;
-  box-shadow: 0 0 5px ${props => props.color || '#ffffff'};
+  will-change: transform, opacity;
 `;
 
 const PromptText = styled(motion.div)`
@@ -164,8 +121,6 @@ const MoonAnimation = () => {
   }, []);
 
   const createButterfly = useCallback((x, y) => {
-    const colors = ['#ff69b4', '#87ceeb', '#ffd700', '#98fb98', '#dda0dd', '#ffa07a', '#20b2aa'];
-    const color = colors[Math.floor(Math.random() * colors.length)];
     const angle = Math.random() * Math.PI * 2;
     const speed = Math.random() * 5 + 3;
     return {
@@ -179,9 +134,7 @@ const MoonAnimation = () => {
       rotation: Math.random() * 360,
       rotationSpeed: (Math.random() - 0.5) * 15,
       scale: Math.random() * 0.5 + 0.5,
-      color,
       opacity: 1,
-      flutterSpeed: Math.random() * 0.5 + 0.5,
     };
   }, []);
 
@@ -198,7 +151,7 @@ const MoonAnimation = () => {
 
     setIsShaking(true);
     vibrate();
-    const newButterflies = Array.from({ length: 30 }, () => 
+    const newButterflies = Array.from({ length: 12 }, () => 
       createButterfly(window.innerWidth / 2, window.innerHeight / 2)
     );
     setButterflies(prev => [...prev, ...newButterflies]);
@@ -263,8 +216,8 @@ const MoonAnimation = () => {
             ...butterfly,
             x: butterfly.x + butterfly.vx,
             y: butterfly.y + butterfly.vy,
-            z: butterfly.z + butterfly.vz,
-            rotation: butterfly.rotation + butterfly.rotationSpeed,
+            z: butterfly.z + (butterfly.vz || 0),
+            rotation: butterfly.rotation + (butterfly.rotationSpeed || 0),
             opacity: butterfly.opacity - 0.003,
             scale: butterfly.scale * 0.999,
           }))
@@ -296,7 +249,7 @@ const MoonAnimation = () => {
       </MoonWrapper>
       <AnimatePresence>
         {butterflies.map(butterfly => (
-          <Butterfly
+          <ButterflyWrapper
             key={butterfly.id}
             style={{
               left: butterfly.x,
@@ -308,10 +261,9 @@ const MoonAnimation = () => {
               `,
               opacity: butterfly.opacity,
             }}
-            color={butterfly.color}
           >
-            <ButterflyBody color={butterfly.color} />
-          </Butterfly>
+            <ButterflySVG style={{ width: 48, height: 48 }} />
+          </ButterflyWrapper>
         ))}
       </AnimatePresence>
       <PromptText

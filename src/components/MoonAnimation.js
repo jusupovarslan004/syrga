@@ -11,7 +11,12 @@ const MoonContainer = styled.div`
   background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
   position: relative;
   overflow: hidden;
-  perspective: 1000px;
+  perspective: 1200px;
+`;
+
+const MoonWrapper = styled(motion.div)`
+  transform-style: preserve-3d;
+  position: relative;
 `;
 
 const Moon = styled(motion.div)`
@@ -39,12 +44,23 @@ const Moon = styled(motion.div)`
     border-radius: 50%;
     filter: blur(10px);
   }
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at 70% 70%, rgba(255, 255, 255, 0.2), transparent);
+    border-radius: 50%;
+    filter: blur(5px);
+  }
 `;
 
 const Butterfly = styled(motion.div)`
   position: absolute;
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   background: transparent;
   pointer-events: none;
   z-index: 1;
@@ -60,14 +76,25 @@ const Butterfly = styled(motion.div)`
     );
     border-radius: 50% 50% 0 50%;
     transform-origin: center;
+    filter: blur(1px);
   }
   &::before {
     transform: rotate(45deg) scale(0.8);
-    filter: blur(1px);
+    animation: flutterLeft 0.5s ease-in-out infinite alternate;
   }
   &::after {
     transform: rotate(-45deg) scale(0.8);
-    filter: blur(1px);
+    animation: flutterRight 0.5s ease-in-out infinite alternate;
+  }
+
+  @keyframes flutterLeft {
+    0% { transform: rotate(45deg) scale(0.8); }
+    100% { transform: rotate(35deg) scale(0.9); }
+  }
+
+  @keyframes flutterRight {
+    0% { transform: rotate(-45deg) scale(0.8); }
+    100% { transform: rotate(-35deg) scale(0.9); }
   }
 `;
 
@@ -116,21 +143,24 @@ const MoonAnimation = () => {
   }, []);
 
   const createButterfly = useCallback((x, y) => {
-    const colors = ['#ff69b4', '#87ceeb', '#ffd700', '#98fb98', '#dda0dd'];
+    const colors = ['#ff69b4', '#87ceeb', '#ffd700', '#98fb98', '#dda0dd', '#ffa07a', '#20b2aa'];
     const color = colors[Math.floor(Math.random() * colors.length)];
+    const angle = Math.random() * Math.PI * 2;
+    const speed = Math.random() * 5 + 3;
     return {
       id: Date.now() + Math.random(),
       x,
       y,
-      z: Math.random() * 200 - 100,
-      vx: (Math.random() - 0.5) * 8,
-      vy: (Math.random() - 0.5) * 8,
-      vz: Math.random() * 2 - 1,
+      z: Math.random() * 300 - 150,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      vz: (Math.random() - 0.5) * 2,
       rotation: Math.random() * 360,
-      rotationSpeed: (Math.random() - 0.5) * 10,
+      rotationSpeed: (Math.random() - 0.5) * 15,
       scale: Math.random() * 0.5 + 0.5,
       color,
       opacity: 1,
+      flutterSpeed: Math.random() * 0.5 + 0.5,
     };
   }, []);
 
@@ -147,7 +177,7 @@ const MoonAnimation = () => {
 
     setIsShaking(true);
     vibrate();
-    const newButterflies = Array.from({ length: 30 }, () => 
+    const newButterflies = Array.from({ length: 40 }, () => 
       createButterfly(window.innerWidth / 2, window.innerHeight / 2)
     );
     setButterflies(prev => [...prev, ...newButterflies]);
@@ -214,7 +244,7 @@ const MoonAnimation = () => {
             y: butterfly.y + butterfly.vy,
             z: butterfly.z + butterfly.vz,
             rotation: butterfly.rotation + butterfly.rotationSpeed,
-            opacity: butterfly.opacity - 0.005,
+            opacity: butterfly.opacity - 0.003,
             scale: butterfly.scale * 0.999,
           }))
           .filter(butterfly => butterfly.opacity > 0)
@@ -227,17 +257,20 @@ const MoonAnimation = () => {
 
   return (
     <MoonContainer ref={containerRef}>
-      <Moon
-        onClick={handleShake}
-        animate={isShaking ? { 
+      <MoonWrapper
+        animate={isShaking ? {
+          rotateY: [0, 360],
+          rotateX: [0, 45, 0],
           scale: [1, 1.2, 1],
-          rotateY: [0, 180, 360],
-          rotateX: [0, 45, 0]
-        } : { scale: 1 }}
-        transition={{ duration: 1, ease: "easeInOut" }}
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.95 }}
-      />
+        } : { rotateY: 0, rotateX: 0, scale: 1 }}
+        transition={{ duration: 1.5, ease: "easeInOut" }}
+      >
+        <Moon
+          onClick={handleShake}
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.95 }}
+        />
+      </MoonWrapper>
       <AnimatePresence>
         {butterflies.map(butterfly => (
           <Butterfly

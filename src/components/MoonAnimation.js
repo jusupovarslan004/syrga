@@ -53,6 +53,7 @@ const MoonAnimation = () => {
   const containerRef = useRef(null);
   const lastShakeTime = useRef(0);
   const lastAcceleration = useRef({ x: 0, y: 0, z: 0 });
+  const shakeCount = useRef(0);
 
   const createParticle = useCallback((x, y) => ({
     id: Date.now() + Math.random(),
@@ -64,19 +65,26 @@ const MoonAnimation = () => {
     opacity: 1,
   }), []);
 
+  const vibrate = useCallback(() => {
+    if (navigator.vibrate) {
+      navigator.vibrate([100, 50, 100]); // Вибрация: 100мс вибрация, 50мс пауза, 100мс вибрация
+    }
+  }, []);
+
   const handleShake = useCallback(() => {
     const now = Date.now();
-    if (now - lastShakeTime.current < 1000) return;
+    if (now - lastShakeTime.current < 500) return; // Уменьшили время между встряхиваниями
     lastShakeTime.current = now;
 
     setIsShaking(true);
+    vibrate(); // Добавляем вибрацию
     const newParticles = Array.from({ length: 50 }, () => 
       createParticle(window.innerWidth / 2, window.innerHeight / 2)
     );
     setParticles(prev => [...prev, ...newParticles]);
 
-    setTimeout(() => setIsShaking(false), 1000);
-  }, [createParticle]);
+    setTimeout(() => setIsShaking(false), 500);
+  }, [createParticle, vibrate]);
 
   useEffect(() => {
     const handleDeviceMotion = (event) => {
@@ -99,22 +107,30 @@ const MoonAnimation = () => {
       lastAcceleration.current = currentAcceleration;
 
       // Проверяем, превышает ли изменение ускорения пороговое значение
-      const threshold = 10; // Уменьшили порог для более легкого срабатывания
+      const threshold = 5; // Уменьшили порог для более легкого срабатывания
+      
       if (deltaX > threshold || deltaY > threshold || deltaZ > threshold) {
-        handleShake();
+        shakeCount.current += 1;
+        if (shakeCount.current >= 2) { // Требуем 2 последовательных встряхивания
+          shakeCount.current = 0;
+          handleShake();
+        }
+      } else {
+        shakeCount.current = 0;
       }
     };
 
-    // Проверяем поддержку DeviceMotion
-    if (window.DeviceMotionEvent) {
-      window.addEventListener('devicemotion', handleDeviceMotion);
+    // Запрашиваем разрешение на использование датчиков
+    if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+      DeviceMotionEvent.requestPermission()
+        .then(permissionState => {
+          if (permissionState === 'granted') {
+            window.addEventListener('devicemotion', handleDeviceMotion);
+          }
+        })
+        .catch(console.error);
     } else {
-      console.log('DeviceMotion не поддерживается');
-      // Добавляем обработчик клика как запасной вариант
-      const moon = document.querySelector('moon');
-      if (moon) {
-        moon.addEventListener('click', handleShake);
-      }
+      window.addEventListener('devicemotion', handleDeviceMotion);
     }
 
     return () => {
@@ -144,7 +160,7 @@ const MoonAnimation = () => {
   return (
     <MoonContainer ref={containerRef}>
       <Moon
-        onClick={handleShake} // Добавляем обработчик клика
+        onClick={handleShake}
         animate={isShaking ? { scale: [1, 1.2, 1] } : { scale: 1 }}
         transition={{ duration: 0.5 }}
         whileHover={{ scale: 1.1 }}

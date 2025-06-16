@@ -11,6 +11,7 @@ const MoonContainer = styled.div`
   background: linear-gradient(180deg, #1a1a2e 0%, #16213e 100%);
   position: relative;
   overflow: hidden;
+  perspective: 1000px;
 `;
 
 const Moon = styled(motion.div)`
@@ -21,20 +22,53 @@ const Moon = styled(motion.div)`
   box-shadow: 
     0 0 50px #fff,
     0 0 100px #fff,
-    0 0 150px #fff;
+    0 0 150px #fff,
+    inset 0 0 50px rgba(255, 255, 255, 0.5);
   cursor: pointer;
   position: relative;
   z-index: 2;
+  transform-style: preserve-3d;
+  &::before {
+    content: '';
+    position: absolute;
+    top: 20%;
+    left: 20%;
+    width: 60%;
+    height: 60%;
+    background: radial-gradient(circle at center, rgba(255, 255, 255, 0.8), transparent);
+    border-radius: 50%;
+    filter: blur(10px);
+  }
 `;
 
-const Particle = styled(motion.div)`
+const Butterfly = styled(motion.div)`
   position: absolute;
-  width: 8px;
-  height: 8px;
-  background: radial-gradient(circle at center, #ffffff, transparent);
-  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  background: transparent;
   pointer-events: none;
   z-index: 1;
+  transform-style: preserve-3d;
+  &::before, &::after {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle at center, 
+      ${props => props.color || '#ffffff'}, 
+      transparent 70%
+    );
+    border-radius: 50% 50% 0 50%;
+    transform-origin: center;
+  }
+  &::before {
+    transform: rotate(45deg) scale(0.8);
+    filter: blur(1px);
+  }
+  &::after {
+    transform: rotate(-45deg) scale(0.8);
+    filter: blur(1px);
+  }
 `;
 
 const PromptText = styled(motion.div)`
@@ -68,7 +102,7 @@ const ShakeButton = styled(motion.button)`
 `;
 
 const MoonAnimation = () => {
-  const [particles, setParticles] = useState([]);
+  const [butterflies, setButterflies] = useState([]);
   const [isShaking, setIsShaking] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const containerRef = useRef(null);
@@ -77,20 +111,28 @@ const MoonAnimation = () => {
   const shakeCount = useRef(0);
 
   useEffect(() => {
-    // Определяем iOS устройство
     const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
     setIsIOS(isIOSDevice);
   }, []);
 
-  const createParticle = useCallback((x, y) => ({
-    id: Date.now() + Math.random(),
-    x,
-    y,
-    vx: (Math.random() - 0.5) * 10,
-    vy: Math.random() * 5 + 5,
-    size: Math.random() * 4 + 4,
-    opacity: 1,
-  }), []);
+  const createButterfly = useCallback((x, y) => {
+    const colors = ['#ff69b4', '#87ceeb', '#ffd700', '#98fb98', '#dda0dd'];
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    return {
+      id: Date.now() + Math.random(),
+      x,
+      y,
+      z: Math.random() * 200 - 100,
+      vx: (Math.random() - 0.5) * 8,
+      vy: (Math.random() - 0.5) * 8,
+      vz: Math.random() * 2 - 1,
+      rotation: Math.random() * 360,
+      rotationSpeed: (Math.random() - 0.5) * 10,
+      scale: Math.random() * 0.5 + 0.5,
+      color,
+      opacity: 1,
+    };
+  }, []);
 
   const vibrate = useCallback(() => {
     if (navigator.vibrate) {
@@ -105,13 +147,13 @@ const MoonAnimation = () => {
 
     setIsShaking(true);
     vibrate();
-    const newParticles = Array.from({ length: 50 }, () => 
-      createParticle(window.innerWidth / 2, window.innerHeight / 2)
+    const newButterflies = Array.from({ length: 30 }, () => 
+      createButterfly(window.innerWidth / 2, window.innerHeight / 2)
     );
-    setParticles(prev => [...prev, ...newParticles]);
+    setButterflies(prev => [...prev, ...newButterflies]);
 
     setTimeout(() => setIsShaking(false), 500);
-  }, [createParticle, vibrate]);
+  }, [createButterfly, vibrate]);
 
   useEffect(() => {
     const handleDeviceMotion = (event) => {
@@ -145,7 +187,6 @@ const MoonAnimation = () => {
 
     if (typeof DeviceMotionEvent !== 'undefined') {
       if (typeof DeviceMotionEvent.requestPermission === 'function') {
-        // iOS 13+ requires permission
         DeviceMotionEvent.requestPermission()
           .then(permissionState => {
             if (permissionState === 'granted') {
@@ -154,7 +195,6 @@ const MoonAnimation = () => {
           })
           .catch(console.error);
       } else {
-        // Android and older iOS versions
         window.addEventListener('devicemotion', handleDeviceMotion);
       }
     }
@@ -165,44 +205,54 @@ const MoonAnimation = () => {
   }, [handleShake]);
 
   useEffect(() => {
-    const updateParticles = () => {
-      setParticles(prev => 
+    const updateButterflies = () => {
+      setButterflies(prev => 
         prev
-          .map(particle => ({
-            ...particle,
-            x: particle.x + particle.vx,
-            y: particle.y + particle.vy,
-            vy: particle.vy + 0.2,
-            opacity: particle.opacity - 0.01,
+          .map(butterfly => ({
+            ...butterfly,
+            x: butterfly.x + butterfly.vx,
+            y: butterfly.y + butterfly.vy,
+            z: butterfly.z + butterfly.vz,
+            rotation: butterfly.rotation + butterfly.rotationSpeed,
+            opacity: butterfly.opacity - 0.005,
+            scale: butterfly.scale * 0.999,
           }))
-          .filter(particle => particle.opacity > 0)
+          .filter(butterfly => butterfly.opacity > 0)
       );
     };
 
-    const animationFrame = requestAnimationFrame(updateParticles);
+    const animationFrame = requestAnimationFrame(updateButterflies);
     return () => cancelAnimationFrame(animationFrame);
-  }, [particles]);
+  }, [butterflies]);
 
   return (
     <MoonContainer ref={containerRef}>
       <Moon
         onClick={handleShake}
-        animate={isShaking ? { scale: [1, 1.2, 1] } : { scale: 1 }}
-        transition={{ duration: 0.5 }}
+        animate={isShaking ? { 
+          scale: [1, 1.2, 1],
+          rotateY: [0, 180, 360],
+          rotateX: [0, 45, 0]
+        } : { scale: 1 }}
+        transition={{ duration: 1, ease: "easeInOut" }}
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.95 }}
       />
       <AnimatePresence>
-        {particles.map(particle => (
-          <Particle
-            key={particle.id}
+        {butterflies.map(butterfly => (
+          <Butterfly
+            key={butterfly.id}
             style={{
-              left: particle.x,
-              top: particle.y,
-              width: particle.size,
-              height: particle.size,
-              opacity: particle.opacity,
+              left: butterfly.x,
+              top: butterfly.y,
+              transform: `
+                translateZ(${butterfly.z}px)
+                rotate(${butterfly.rotation}deg)
+                scale(${butterfly.scale})
+              `,
+              opacity: butterfly.opacity,
             }}
+            color={butterfly.color}
           />
         ))}
       </AnimatePresence>

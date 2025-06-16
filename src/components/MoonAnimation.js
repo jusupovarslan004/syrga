@@ -45,15 +45,42 @@ const PromptText = styled(motion.div)`
   text-align: center;
   font-family: 'Arial', sans-serif;
   text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+  padding: 0 20px;
+`;
+
+const ShakeButton = styled(motion.button)`
+  position: absolute;
+  bottom: 30%;
+  padding: 15px 30px;
+  background: rgba(255, 255, 255, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-radius: 25px;
+  color: white;
+  font-size: 1.2rem;
+  cursor: pointer;
+  backdrop-filter: blur(5px);
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.05);
+  }
 `;
 
 const MoonAnimation = () => {
   const [particles, setParticles] = useState([]);
   const [isShaking, setIsShaking] = useState(false);
+  const [isIOS, setIsIOS] = useState(false);
   const containerRef = useRef(null);
   const lastShakeTime = useRef(0);
   const lastAcceleration = useRef({ x: 0, y: 0, z: 0 });
   const shakeCount = useRef(0);
+
+  useEffect(() => {
+    // Определяем iOS устройство
+    const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+    setIsIOS(isIOSDevice);
+  }, []);
 
   const createParticle = useCallback((x, y) => ({
     id: Date.now() + Math.random(),
@@ -67,17 +94,17 @@ const MoonAnimation = () => {
 
   const vibrate = useCallback(() => {
     if (navigator.vibrate) {
-      navigator.vibrate([100, 50, 100]); // Вибрация: 100мс вибрация, 50мс пауза, 100мс вибрация
+      navigator.vibrate([100, 50, 100]);
     }
   }, []);
 
   const handleShake = useCallback(() => {
     const now = Date.now();
-    if (now - lastShakeTime.current < 500) return; // Уменьшили время между встряхиваниями
+    if (now - lastShakeTime.current < 500) return;
     lastShakeTime.current = now;
 
     setIsShaking(true);
-    vibrate(); // Добавляем вибрацию
+    vibrate();
     const newParticles = Array.from({ length: 50 }, () => 
       createParticle(window.innerWidth / 2, window.innerHeight / 2)
     );
@@ -91,27 +118,23 @@ const MoonAnimation = () => {
       const acceleration = event.accelerationIncludingGravity;
       if (!acceleration) return;
 
-      // Получаем текущие значения ускорения
       const currentAcceleration = {
         x: acceleration.x || 0,
         y: acceleration.y || 0,
         z: acceleration.z || 0
       };
 
-      // Вычисляем изменение ускорения
       const deltaX = Math.abs(currentAcceleration.x - lastAcceleration.current.x);
       const deltaY = Math.abs(currentAcceleration.y - lastAcceleration.current.y);
       const deltaZ = Math.abs(currentAcceleration.z - lastAcceleration.current.z);
 
-      // Обновляем последние значения
       lastAcceleration.current = currentAcceleration;
 
-      // Проверяем, превышает ли изменение ускорения пороговое значение
-      const threshold = 5; // Уменьшили порог для более легкого срабатывания
+      const threshold = 5;
       
       if (deltaX > threshold || deltaY > threshold || deltaZ > threshold) {
         shakeCount.current += 1;
-        if (shakeCount.current >= 2) { // Требуем 2 последовательных встряхивания
+        if (shakeCount.current >= 2) {
           shakeCount.current = 0;
           handleShake();
         }
@@ -120,17 +143,20 @@ const MoonAnimation = () => {
       }
     };
 
-    // Запрашиваем разрешение на использование датчиков
-    if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-      DeviceMotionEvent.requestPermission()
-        .then(permissionState => {
-          if (permissionState === 'granted') {
-            window.addEventListener('devicemotion', handleDeviceMotion);
-          }
-        })
-        .catch(console.error);
-    } else {
-      window.addEventListener('devicemotion', handleDeviceMotion);
+    if (typeof DeviceMotionEvent !== 'undefined') {
+      if (typeof DeviceMotionEvent.requestPermission === 'function') {
+        // iOS 13+ requires permission
+        DeviceMotionEvent.requestPermission()
+          .then(permissionState => {
+            if (permissionState === 'granted') {
+              window.addEventListener('devicemotion', handleDeviceMotion);
+            }
+          })
+          .catch(console.error);
+      } else {
+        // Android and older iOS versions
+        window.addEventListener('devicemotion', handleDeviceMotion);
+      }
     }
 
     return () => {
@@ -185,8 +211,17 @@ const MoonAnimation = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 1, duration: 1 }}
       >
-        Встряхни телефон или нажми на луну...
+        {isIOS ? 'Нажми на луну или кнопку для эффекта' : 'Встряхни телефон или нажми на луну...'}
       </PromptText>
+      {isIOS && (
+        <ShakeButton
+          onClick={handleShake}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          Создать эффект ✨
+        </ShakeButton>
+      )}
     </MoonContainer>
   );
 };

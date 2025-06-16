@@ -219,7 +219,7 @@ const MoonAnimation = ({ onMoonClick }) => {
             y: butterfly.y + butterfly.vy,
             z: butterfly.z + (butterfly.vz || 0),
             rotation: butterfly.rotation + (butterfly.rotationSpeed || 0),
-            opacity: butterfly.opacity - 0.003,
+            opacity: butterfly.opacity - 0.01,
             scale: butterfly.scale * 0.999,
           }))
           .filter(butterfly => butterfly.opacity > 0)
@@ -235,7 +235,7 @@ const MoonAnimation = ({ onMoonClick }) => {
       setTimeout(() => {
         setShowTransition(false);
         onMoonClick();
-      }, 1000);
+      }, 500);
     }
   }, [butterflies, isShaking, showTransition, effectStarted, onMoonClick]);
 

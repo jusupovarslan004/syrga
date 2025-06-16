@@ -1,7 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useSpring, animated } from 'react-spring';
 
 const MoonContainer = styled.div`
   width: 100vw;
@@ -28,7 +27,7 @@ const Moon = styled(motion.div)`
   z-index: 2;
 `;
 
-const Particle = styled(animated.div)`
+const Particle = styled(motion.div)`
   position: absolute;
   width: 8px;
   height: 8px;
@@ -54,7 +53,7 @@ const MoonAnimation = () => {
   const containerRef = useRef(null);
   const lastShakeTime = useRef(0);
 
-  const createParticle = (x, y) => ({
+  const createParticle = useCallback((x, y) => ({
     id: Date.now() + Math.random(),
     x,
     y,
@@ -62,9 +61,9 @@ const MoonAnimation = () => {
     vy: Math.random() * 5 + 5,
     size: Math.random() * 4 + 4,
     opacity: 1,
-  });
+  }), []);
 
-  const handleShake = () => {
+  const handleShake = useCallback(() => {
     const now = Date.now();
     if (now - lastShakeTime.current < 1000) return;
     lastShakeTime.current = now;
@@ -76,7 +75,7 @@ const MoonAnimation = () => {
     setParticles(prev => [...prev, ...newParticles]);
 
     setTimeout(() => setIsShaking(false), 1000);
-  };
+  }, [createParticle]);
 
   useEffect(() => {
     const handleDeviceMotion = (event) => {
@@ -97,7 +96,7 @@ const MoonAnimation = () => {
 
     window.addEventListener('devicemotion', handleDeviceMotion);
     return () => window.removeEventListener('devicemotion', handleDeviceMotion);
-  }, []);
+  }, [handleShake]);
 
   useEffect(() => {
     const updateParticles = () => {

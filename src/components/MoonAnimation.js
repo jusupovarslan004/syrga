@@ -52,6 +52,7 @@ const MoonAnimation = () => {
   const [isShaking, setIsShaking] = useState(false);
   const containerRef = useRef(null);
   const lastShakeTime = useRef(0);
+  const lastAcceleration = useRef({ x: 0, y: 0, z: 0 });
 
   const createParticle = useCallback((x, y) => ({
     id: Date.now() + Math.random(),
@@ -82,20 +83,43 @@ const MoonAnimation = () => {
       const acceleration = event.accelerationIncludingGravity;
       if (!acceleration) return;
 
-      const threshold = 15;
-      const totalAcceleration = Math.sqrt(
-        acceleration.x * acceleration.x +
-        acceleration.y * acceleration.y +
-        acceleration.z * acceleration.z
-      );
+      // Получаем текущие значения ускорения
+      const currentAcceleration = {
+        x: acceleration.x || 0,
+        y: acceleration.y || 0,
+        z: acceleration.z || 0
+      };
 
-      if (totalAcceleration > threshold) {
+      // Вычисляем изменение ускорения
+      const deltaX = Math.abs(currentAcceleration.x - lastAcceleration.current.x);
+      const deltaY = Math.abs(currentAcceleration.y - lastAcceleration.current.y);
+      const deltaZ = Math.abs(currentAcceleration.z - lastAcceleration.current.z);
+
+      // Обновляем последние значения
+      lastAcceleration.current = currentAcceleration;
+
+      // Проверяем, превышает ли изменение ускорения пороговое значение
+      const threshold = 10; // Уменьшили порог для более легкого срабатывания
+      if (deltaX > threshold || deltaY > threshold || deltaZ > threshold) {
         handleShake();
       }
     };
 
-    window.addEventListener('devicemotion', handleDeviceMotion);
-    return () => window.removeEventListener('devicemotion', handleDeviceMotion);
+    // Проверяем поддержку DeviceMotion
+    if (window.DeviceMotionEvent) {
+      window.addEventListener('devicemotion', handleDeviceMotion);
+    } else {
+      console.log('DeviceMotion не поддерживается');
+      // Добавляем обработчик клика как запасной вариант
+      const moon = document.querySelector('moon');
+      if (moon) {
+        moon.addEventListener('click', handleShake);
+      }
+    }
+
+    return () => {
+      window.removeEventListener('devicemotion', handleDeviceMotion);
+    };
   }, [handleShake]);
 
   useEffect(() => {
@@ -120,6 +144,7 @@ const MoonAnimation = () => {
   return (
     <MoonContainer ref={containerRef}>
       <Moon
+        onClick={handleShake} // Добавляем обработчик клика
         animate={isShaking ? { scale: [1, 1.2, 1] } : { scale: 1 }}
         transition={{ duration: 0.5 }}
         whileHover={{ scale: 1.1 }}
@@ -144,7 +169,7 @@ const MoonAnimation = () => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 1, duration: 1 }}
       >
-        Встряхни телефон...
+        Встряхни телефон или нажми на луну...
       </PromptText>
     </MoonContainer>
   );

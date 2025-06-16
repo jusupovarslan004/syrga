@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
 import ButterflySVG from './ButterflySVG';
-import MagicAlbum from './MagicAlbum';
 
 const MoonContainer = styled.div`
   width: 100vw;
@@ -104,21 +103,34 @@ const MagicTransition = styled(motion.div)`
   pointer-events: none;
 `;
 
-const MoonAnimation = () => {
+const MoonAnimation = ({ onMoonClick }) => {
   const [butterflies, setButterflies] = useState([]);
   const [isShaking, setIsShaking] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [showTransition, setShowTransition] = useState(false);
-  const [showAlbum, setShowAlbum] = useState(false);
   const [effectStarted, setEffectStarted] = useState(false);
   const containerRef = useRef(null);
   const lastShakeTime = useRef(0);
   const lastAcceleration = useRef({ x: 0, y: 0, z: 0 });
   const shakeCount = useRef(0);
+  const audioRef = useRef(null);
+
+  useEffect(() => {
+    audioRef.current = new Audio('/media/apologize.mp3');
+    audioRef.current.volume = 0.7;
+  }, []);
 
   useEffect(() => {
     const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
     setIsIOS(isIOSDevice);
+  }, []);
+
+  const startMusic = useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.play().catch(error => {
+        console.log('Error playing audio:', error);
+      });
+    }
   }, []);
 
   const createButterfly = useCallback((x, y) => {
@@ -153,12 +165,13 @@ const MoonAnimation = () => {
     lastShakeTime.current = now;
     setIsShaking(true);
     vibrate();
+    startMusic();
     const newButterflies = Array.from({ length: 12 }, () => 
       createButterfly(window.innerWidth / 2, window.innerHeight / 2)
     );
     setButterflies(prev => [...prev, ...newButterflies]);
     setTimeout(() => setIsShaking(false), 500);
-  }, [createButterfly, vibrate, effectStarted]);
+  }, [createButterfly, vibrate, effectStarted, startMusic]);
 
   useEffect(() => {
     const handleDeviceMotion = (event) => {
@@ -223,18 +236,14 @@ const MoonAnimation = () => {
   }, [butterflies]);
 
   useEffect(() => {
-    if (effectStarted && butterflies.length === 0 && !isShaking && !showAlbum && !showTransition) {
+    if (effectStarted && butterflies.length === 0 && !isShaking && !showTransition) {
       setShowTransition(true);
       setTimeout(() => {
         setShowTransition(false);
-        setShowAlbum(true);
-      }, 1600);
+        onMoonClick();
+      }, 1000);
     }
-  }, [butterflies, isShaking, showAlbum, showTransition, effectStarted]);
-
-  if (showAlbum) {
-    return <MagicAlbum />;
-  }
+  }, [butterflies, isShaking, showTransition, effectStarted, onMoonClick]);
 
   return (
     <MoonContainer ref={containerRef}>
@@ -247,7 +256,10 @@ const MoonAnimation = () => {
         transition={{ duration: 1.5, ease: "easeInOut" }}
       >
         <MoonSphere
-          onClick={handleShake}
+          onClick={() => {
+            handleShake();
+            startMusic();
+          }}
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.95 }}
         >
@@ -298,4 +310,4 @@ const MoonAnimation = () => {
   );
 };
 
-export default MoonAnimation; 
+export default MoonAnimation;

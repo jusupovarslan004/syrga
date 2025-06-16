@@ -17,71 +17,80 @@ const MoonContainer = styled.div`
 const MoonWrapper = styled(motion.div)`
   transform-style: preserve-3d;
   position: relative;
-`;
-
-const Moon = styled(motion.div)`
   width: 200px;
   height: 200px;
-  background: radial-gradient(circle at 30% 30%, #ffffff, #f0f0f0);
+`;
+
+const MoonSphere = styled(motion.div)`
+  width: 100%;
+  height: 100%;
+  position: relative;
+  transform-style: preserve-3d;
   border-radius: 50%;
+  background: radial-gradient(circle at 30% 30%, #ffffff, #f0f0f0);
   box-shadow: 
     0 0 50px #fff,
     0 0 100px #fff,
     0 0 150px #fff,
     inset 0 0 50px rgba(255, 255, 255, 0.5);
   cursor: pointer;
-  position: relative;
-  z-index: 2;
-  transform-style: preserve-3d;
+
   &::before {
-    content: '';
-    position: absolute;
-    top: 20%;
-    left: 20%;
-    width: 60%;
-    height: 60%;
-    background: radial-gradient(circle at center, rgba(255, 255, 255, 0.8), transparent);
-    border-radius: 50%;
-    filter: blur(10px);
-  }
-  &::after {
     content: '';
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background: radial-gradient(circle at 70% 70%, rgba(255, 255, 255, 0.2), transparent);
+    background: 
+      radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.8), transparent 50%),
+      radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.3), transparent 50%),
+      url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M50 0C22.4 0 0 22.4 0 50s22.4 50 50 50 50-22.4 50-50S77.6 0 50 0zm0 90c-22.1 0-40-17.9-40-40s17.9-40 40-40 40 17.9 40 40-17.9 40-40 40z' fill='rgba(255,255,255,0.1)'/%3E%3C/svg%3E");
     border-radius: 50%;
-    filter: blur(5px);
+    filter: blur(2px);
   }
+`;
+
+const MoonCraters = styled.div`
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 50%;
+  background: 
+    radial-gradient(circle at 30% 40%, rgba(0,0,0,0.2) 0%, transparent 20%),
+    radial-gradient(circle at 70% 60%, rgba(0,0,0,0.15) 0%, transparent 15%),
+    radial-gradient(circle at 40% 70%, rgba(0,0,0,0.1) 0%, transparent 10%),
+    radial-gradient(circle at 60% 30%, rgba(0,0,0,0.1) 0%, transparent 10%);
+  transform-style: preserve-3d;
 `;
 
 const Butterfly = styled(motion.div)`
   position: absolute;
-  width: 24px;
-  height: 24px;
-  background: transparent;
+  width: 30px;
+  height: 30px;
+  transform-style: preserve-3d;
   pointer-events: none;
   z-index: 1;
-  transform-style: preserve-3d;
+
   &::before, &::after {
     content: '';
     position: absolute;
     width: 100%;
     height: 100%;
-    background: radial-gradient(circle at center, 
-      ${props => props.color || '#ffffff'}, 
-      transparent 70%
-    );
+    background: ${props => props.color || '#ffffff'};
     border-radius: 50% 50% 0 50%;
     transform-origin: center;
     filter: blur(1px);
+    box-shadow: 0 0 10px ${props => props.color || '#ffffff'};
   }
+
   &::before {
     transform: rotate(45deg) scale(0.8);
     animation: flutterLeft 0.5s ease-in-out infinite alternate;
   }
+
   &::after {
     transform: rotate(-45deg) scale(0.8);
     animation: flutterRight 0.5s ease-in-out infinite alternate;
@@ -96,6 +105,18 @@ const Butterfly = styled(motion.div)`
     0% { transform: rotate(-45deg) scale(0.8); }
     100% { transform: rotate(-35deg) scale(0.9); }
   }
+`;
+
+const ButterflyBody = styled.div`
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 4px;
+  height: 20px;
+  background: ${props => props.color || '#ffffff'};
+  transform: translate(-50%, -50%);
+  border-radius: 2px;
+  box-shadow: 0 0 5px ${props => props.color || '#ffffff'};
 `;
 
 const PromptText = styled(motion.div)`
@@ -177,7 +198,7 @@ const MoonAnimation = () => {
 
     setIsShaking(true);
     vibrate();
-    const newButterflies = Array.from({ length: 40 }, () => 
+    const newButterflies = Array.from({ length: 30 }, () => 
       createButterfly(window.innerWidth / 2, window.innerHeight / 2)
     );
     setButterflies(prev => [...prev, ...newButterflies]);
@@ -265,11 +286,13 @@ const MoonAnimation = () => {
         } : { rotateY: 0, rotateX: 0, scale: 1 }}
         transition={{ duration: 1.5, ease: "easeInOut" }}
       >
-        <Moon
+        <MoonSphere
           onClick={handleShake}
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.95 }}
-        />
+        >
+          <MoonCraters />
+        </MoonSphere>
       </MoonWrapper>
       <AnimatePresence>
         {butterflies.map(butterfly => (
@@ -286,7 +309,9 @@ const MoonAnimation = () => {
               opacity: butterfly.opacity,
             }}
             color={butterfly.color}
-          />
+          >
+            <ButterflyBody color={butterfly.color} />
+          </Butterfly>
         ))}
       </AnimatePresence>
       <PromptText

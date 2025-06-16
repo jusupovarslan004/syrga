@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import styled, { keyframes } from 'styled-components';
+import styled from 'styled-components';
 import { motion, AnimatePresence } from 'framer-motion';
 import ButterflySVG from './ButterflySVG';
 
@@ -106,7 +106,6 @@ const MagicTransition = styled(motion.div)`
 const MoonAnimation = ({ onMoonClick }) => {
   const [butterflies, setButterflies] = useState([]);
   const [isShaking, setIsShaking] = useState(false);
-  const [isIOS, setIsIOS] = useState(false);
   const [showTransition, setShowTransition] = useState(false);
   const [effectStarted, setEffectStarted] = useState(false);
   const containerRef = useRef(null);
@@ -118,11 +117,6 @@ const MoonAnimation = ({ onMoonClick }) => {
   useEffect(() => {
     audioRef.current = new Audio('/media/apologize.mp3');
     audioRef.current.volume = 0.7;
-  }, []);
-
-  useEffect(() => {
-    const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    setIsIOS(isIOSDevice);
   }, []);
 
   const startMusic = useCallback(() => {
@@ -213,7 +207,7 @@ const MoonAnimation = ({ onMoonClick }) => {
     return () => {
       window.removeEventListener('devicemotion', handleDeviceMotion);
     };
-  }, [handleShake]);
+  }, [handleShake, lastAcceleration]);
 
   useEffect(() => {
     const updateButterflies = () => {
